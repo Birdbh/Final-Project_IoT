@@ -9,7 +9,7 @@ const char* password = "Wjg88vqb";
 WiFiClient client;
 
 unsigned long channelID = 2077705; //your channel
-const char * myWriteAPIKey = "EK8E6JY8O4DX0T6X"; // your WRITE API key
+const char * myReadAPIKey = "YOACHKQ9U8NDDLV3"; // your WRITE API key
 const char* server = "api.thingspeak.com";
 
 //float temperature;
@@ -48,8 +48,8 @@ void loop() {
 
   ThingSpeak.begin(client);
   
-  long temp_data = ThingSpeak.readLongField(channelID, 2, myWriteAPIKey);
-  long hum_data = ThingSpeak.readLongField(channelID, 2, myWriteAPIKey);
+  long temp_data = ThingSpeak.readLongField(channelID, 2, myReadAPIKey);
+  long hum_data = ThingSpeak.readLongField(channelID, 2, myReadAPIKey);
 
   Serial.print("Temperature: ");
   Serial.print(temp_data);
