@@ -2,18 +2,6 @@
 #include <ESP8266WiFi.h>
 #include <ThingSpeak.h>
 
-// For testing, in case you haven't, install the Adafruit BME280 library.
-#include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafru
-
-// Temporary variables
-static char celsiusTemp[7];
-static char fahrenheitTemp[7];
-static char humidityTemp[7];
-
-//Initialize the sensor:
-Adafruit_BME280 bme;
 
 // Replace with your network details
 const char* ssid = "";
@@ -22,11 +10,17 @@ const char* password = "";
 WiFiClient client;
 
 
-unsigned long channelID = 2077705; //your channel
-const char * myWriteAPIKey = "EK8E6JY8O4DX0T6X"; // your WRITE API key
+// Temporary variables
+static char celsiusTemp[7];
+static char fahrenheitTemp[7];
+static char humidityTemp[7];
+
+
+unsigned long channelID = 2058428; //your channel
+const char * myWriteAPIKey = "RHKN434J3VANA8AO"; // your WRITE API key
 const char* server = "api.thingspeak.com";
 
-const int postingInterval = 20 * 1000; // post data every 10 seconds
+const int postingInterval = 20 * 1000; // post data every 20 seconds
 
 // only runs once on boot
 void setup() {
@@ -34,14 +28,7 @@ void setup() {
   Serial.begin(115200);
   delay(10);
 
-  bool status;
-
-  //  Check for connections.
-  status = bme.begin(0x76);
-  if (!status){
-    Serial.println("Couldn't find a BME280 sensor, check your connections");
-    while (1);
-  }
+  dht.begin();
   
   // Connecting to WiFi network
   Serial.println();
@@ -59,6 +46,7 @@ void setup() {
   
 }
 
+// runs over and over again
 void loop() {
   ThingSpeak.begin(client);
   if (client.connect(server, 80)) {
@@ -73,20 +61,27 @@ void loop() {
     ThingSpeak.setField(4,rssi);
 
 // **** This part reads only sensors and calculates
-            float h = bme.readHumidity();
+            // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+            float h = dht.readHumidity();
             // Read temperature as Celsius (the default)
-            float t = bme.readTemperature();
-            // Read temperature as Fahrenheit
-            float f = t * 9 / 5 + 32;
+            float t = dht.readTemperature();
+            // Read temperature as Fahrenheit (isFahrenheit = true)
+            float f = dht.readTemperature(true);
             // Check if any reads failed and exit early (to try again).
-            if (isnan(h) || isnan(t)) {
-              Serial.println("Failed to read from sensor!");
+            if (isnan(h) || isnan(t) || isnan(f)) {
+              Serial.println("Failed to read from DHT sensor!");
               strcpy(celsiusTemp,"Failed");
               strcpy(fahrenheitTemp, "Failed");
               strcpy(humidityTemp, "Failed");         
             }
             else{
               // Computes temperature values in Celsius + Fahrenheit and Humidity
+              float hic = dht.computeHeatIndex(t, h, false);       
+              dtostrf(hic, 6, 2, celsiusTemp);             
+              float hif = dht.computeHeatIndex(f, h);
+              dtostrf(hif, 6, 2, fahrenheitTemp);         
+              dtostrf(h, 6, 2, humidityTemp);
+
               // You can delete the following Serial.print's, it's just for debugging purposes
               Serial.print("Humidity: ");
               Serial.print(h);
@@ -94,11 +89,26 @@ void loop() {
               Serial.print(t);
               Serial.print(" *C ");
               Serial.print(f);
-              Serial.print(" *F ");
+              Serial.print(" *F\t Heat index: ");
+              Serial.print(hic);
+              Serial.print(" *C ");
+              Serial.print(hif);
+              Serial.print(" *F");
+              Serial.print("Humidity: ");
+              Serial.print(h);
+              Serial.print(" %\t Temperature: ");
+              Serial.print(t);
+              Serial.print(" *C ");
+              Serial.print(f);
+              Serial.print(" *F\t Heat index: ");
+              Serial.print(hic);
+              Serial.print(" *C ");
+              Serial.print(hif);
+              Serial.println(" *F");
         //end of sensor readings
-              ThingSpeak.setField(3,t);
-              //ThingSpeak.setField(2,f)  In case we decide to add Fahrenheit readings as well.
-              ThingSpeak.setField(1,h);
+              ThingSpeak.setField(1,t);
+              ThingSpeak.setField(2,f);
+              ThingSpeak.setField(3,h);
             }
             
       ThingSpeak.writeFields(channelID, myWriteAPIKey);
