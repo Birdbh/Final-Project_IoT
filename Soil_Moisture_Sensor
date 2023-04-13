@@ -1,0 +1,74 @@
+// Including the ESP8266 WiFi library
+#include <ESP8266WiFi.h>
+#include <ThingSpeak.h>
+
+//Define Sensor pins
+#define SensorPin A0
+
+// Replace with your network details
+const char* ssid = "Bird";
+const char* password = "test123456";
+
+WiFiClient client;
+
+unsigned long channelID = 2077705; //your channel
+const char * myWriteAPIKey = "EK8E6JY8O4DX0T6X"; // your WRITE API key
+const char* server = "api.thingspeak.com";
+
+const int postingInterval = 20 * 1000; // post data every 20 seconds
+
+// only runs once on boot
+void setup() {
+  // Initializing serial port for debugging purposes
+  Serial.begin(115200);
+  delay(10);
+  
+  // Connecting to WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  
+  WiFi.begin(ssid, password);
+  
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  
+}
+
+// runs over and over again
+void loop() {
+  ThingSpeak.begin(client);
+  if (client.connect(server, 80)) {
+    
+    // Measure Signal Strength (RSSI) of Wi-Fi connection
+    long rssi = WiFi.RSSI();
+
+    Serial.print("RSSI: ");
+    Serial.println(rssi); 
+
+    float moistness_level;
+    int wettness = analogRead(A0);
+
+    if (isnan(wettness)) {
+      Serial.println("Failed to read from moisture sensor!");    
+    }
+    else{
+      moistness_level = ( 100 - ( (wettness/1023.00) * 100 ) )
+      Serial.print("Moistness_level = ");
+      Serial.print(moistness_level);
+      //end of sensor readings
+      //Change field values
+      ThingSpeak.setField(2,moistness_level);
+    }
+            
+      ThingSpeak.writeFields(channelID, myWriteAPIKey);
+  }
+    client.stop();
+
+  // wait and then post again
+  delay(postingInterval);
+}
