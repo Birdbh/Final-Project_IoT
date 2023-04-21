@@ -3,8 +3,8 @@
 #include <LiquidCrystal_I2C.h>
 
 // Replace with your network details
-const char* ssid = "OnePlus 10 Pro 5G";
-const char* password = "Wjg88vqb";
+const char* ssid = "xxxxx";
+const char* password = "xxxxxx";
 
 WiFiClient client;
 
