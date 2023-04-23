@@ -1,23 +1,22 @@
+// Check here for connections: https://randomnerdtutorials.com/esp8266-ds18b20-temperature-sensor-web-server-with-arduino-ide/
+
 // Including the ESP8266 WiFi library
 #include <ESP8266WiFi.h>
 #include <ThingSpeak.h>
 
-// For testing, in case you haven't, install the Adafruit BME280 library.
-#include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafru
+// Using the new temp sensor
+#include <DallasTemperature.h>
+#include <OneWire.h>
 
-// Temporary variables
-static char celsiusTemp[7];
-static char fahrenheitTemp[7];
-static char humidityTemp[7];
+const int oneWireBus = 4;
 
-//Initialize the sensor:
-Adafruit_BME280 bme;
+OneWire oneWire(oneWireBus);
+
+DallasTemperature sensors(&oneWire);
 
 // Replace with your network details
-const char* ssid = "";
-const char* password = "";
+const char* ssid = "LOL";
+const char* password = "diego123";
 
 WiFiClient client;
 
@@ -34,15 +33,10 @@ void setup() {
   Serial.begin(115200);
   delay(10);
 
-  bool status;
+  // Start the DS18B20 sensor
+  sensors.begin();
 
-  //  Check for connections.
-  status = bme.begin(0x76);
-  if (!status){
-    Serial.println("Couldn't find a BME280 sensor, check your connections");
-    while (1);
-  }
-  
+
   // Connecting to WiFi network
   Serial.println();
   Serial.print("Connecting to ");
@@ -73,32 +67,22 @@ void loop() {
     ThingSpeak.setField(4,rssi);
 
 // **** This part reads only sensors and calculates
-            float h = bme.readHumidity();
             // Read temperature as Celsius (the default)
-            float t = bme.readTemperature();
-            // Read temperature as Fahrenheit
-            float f = t * 9 / 5 + 32;
+            sensors.requestTemperatures();
+            float t = sensors.getTempCByIndex(0);
             // Check if any reads failed and exit early (to try again).
-            if (isnan(h) || isnan(t)) {
-              Serial.println("Failed to read from sensor!");
-              strcpy(celsiusTemp,"Failed");
-              strcpy(fahrenheitTemp, "Failed");
-              strcpy(humidityTemp, "Failed");         
+            if (isnan(t)) {
+              Serial.println("Failed to read from sensor!");      
             }
             else{
               // Computes temperature values in Celsius + Fahrenheit and Humidity
               // You can delete the following Serial.print's, it's just for debugging purposes
-              Serial.print("Humidity: ");
-              Serial.print(h);
               Serial.print(" %\t Temperature: ");
               Serial.print(t);
               Serial.print(" *C ");
-              Serial.print(f);
-              Serial.print(" *F ");
         //end of sensor readings
               ThingSpeak.setField(3,t);
               //ThingSpeak.setField(2,f)  In case we decide to add Fahrenheit readings as well.
-              ThingSpeak.setField(1,h);
             }
             
       ThingSpeak.writeFields(channelID, myWriteAPIKey);
